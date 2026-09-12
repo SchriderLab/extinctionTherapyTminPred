@@ -1,0 +1,393 @@
+// ============================================================
+// PHASE B
+// Load pretreatment checkpoint and generate ONE fixed D1
+// trajectory for this patient.
+//
+// This is the only place where we repeatedly calculate the
+// expensive resistance summaries.
+// ============================================================
+
+initialize()
+{
+    initializeSLiMModelType("nonWF");
+
+    defineConstant("Q", 1000);
+    defineConstant("expansion_time", 20);
+    defineConstant("prefix_length", 20);
+    defineConstant("relapse_cap_factor", 1.5);
+
+    defineConstant(
+        "mut_rate",
+        base_mut_rate * Q
+    );
+
+    defineConstant(
+        "fitness_scaling",
+        1.0 - patient_turnover
+    );
+
+    defineGlobal("treatment_start_cycle", -1);
+    defineGlobal("dose_drug_1", 0.0);
+
+    initializeMutationType(
+        "m1",
+        1.0,
+        "s",
+        "return rlnorm(1, -0.635825624, 0.5);"
+    );
+
+    initializeMutationType(
+        "m2",
+        1.0,
+        "s",
+        "return rlnorm(1, -0.635825624, 0.5);"
+    );
+
+    initializeMutationType(
+        "m3",
+        1.0,
+        "f",
+        0.0
+    );
+
+    m1.mutationStackPolicy = "s";
+    m2.mutationStackPolicy = "s";
+    m3.mutationStackPolicy = "f";
+
+    initializeGenomicElementType(
+        "g1",
+        c(m1,m2,m3),
+        c(draw_m1,draw_m2,draw_m3)
+    );
+
+    initializeGenomicElement(
+        g1,
+        0,
+        0
+    );
+
+    initializeMutationRate(
+        mut_rate
+    );
+
+    initializeRecombinationRate(
+        0.0
+    );
+}
+
+
+mutationEffect(m1)
+{
+    return 1.0;
+}
+
+mutationEffect(m2)
+{
+    return 1.0;
+}
+
+mutationEffect(m3)
+{
+    return 1.0;
+}
+
+
+reproduction()
+{
+    subpop.addCloned(
+        individual
+    );
+}
+
+
+fitnessEffect(p1)
+{
+    R1 =
+        individual.sumOfMutationsOfType(m1);
+
+    if (R1 > 1.0)
+        R1 = 1.0;
+
+    m3_i =
+        asInteger(
+            individual.countOfMutationsOfType(m3) > 0
+        );
+
+    return (
+        1.0 -
+        dose_drug_1 *
+        (1.0 - R1) *
+        (
+            1.0 -
+            cross_resistance * m3_i
+        )
+    );
+}
+
+
+1 early()
+{
+    // Restores exactly the expanded population state.
+    sim.readFromPopulationFile(
+        snapshot_file
+    );
+
+    // Population files do not preserve the RNG state.
+    // This gives this patient ONE fixed D1 continuation.
+    setSeed(
+        asInteger(d1_seed)
+    );
+
+    defineGlobal(
+        "treatment_start_cycle",
+        sim.cycle
+    );
+
+    defineGlobal(
+        "dose_drug_1",
+        dose_drug_1_mono
+    );
+
+    p1.fitnessScaling =
+        fitness_scaling;
+
+    header = c(
+        "patient_id",
+        "t_treatment",
+        "cycle",
+        "N",
+        "freq_m1",
+        "freq_m2",
+        "freq_m3",
+        "mean_R1",
+        "sd_R1",
+        "mean_R2",
+        "sd_R2",
+        "mean_R2_eff",
+        "sd_R2_eff",
+        "frac_R2_eff_ge_05",
+        "frac_R2_eff_ge_09",
+        "base_mut_rate",
+        "dose_drug_1",
+        "dose_drug_2",
+        "turnover_rate",
+        "draw_m1",
+        "draw_m2",
+        "draw_m3",
+        "cross_resistance",
+        "d1_seed"
+    );
+
+    writeFile(
+        prefix_file,
+        paste(header, sep=",")
+    );
+
+    // Keeps SLiM scheduled beyond the prefix.
+    community.registerLateEvent(
+        NULL,
+        "{sim.simulationFinished();}",
+        sim.cycle + prefix_length + 1,
+        sim.cycle + prefix_length + 1
+    );
+}
+
+
+early()
+{
+    if (exists("p1"))
+    {
+        p1.fitnessScaling =
+            fitness_scaling;
+    }
+}
+
+
+late()
+{
+    if (treatment_start_cycle < 0)
+        return;
+
+    t =
+        sim.cycle -
+        treatment_start_cycle;
+
+    if (t < 0)
+        return;
+
+    N =
+        p1.individualCount;
+
+    freq_m1 = 0.0;
+    freq_m2 = 0.0;
+    freq_m3 = 0.0;
+
+    mean_R1 = 0.0;
+    sd_R1 = 0.0;
+
+    mean_R2 = 0.0;
+    sd_R2 = 0.0;
+
+    mean_R2_eff = 0.0;
+    sd_R2_eff = 0.0;
+
+    frac_R2_eff_ge_05 = 0.0;
+    frac_R2_eff_ge_09 = 0.0;
+
+
+    if (N > 0)
+    {
+        inds =
+            p1.individuals;
+
+        count1 =
+            inds.countOfMutationsOfType(m1);
+
+        count2 =
+            inds.countOfMutationsOfType(m2);
+
+        count3 =
+            inds.countOfMutationsOfType(m3);
+
+        freq_m1 =
+            sum(count1 > 0) / N;
+
+        freq_m2 =
+            sum(count2 > 0) / N;
+
+        freq_m3 =
+            sum(count3 > 0) / N;
+
+
+        R1 =
+            inds.sumOfMutationsOfType(m1);
+
+        R2 =
+            inds.sumOfMutationsOfType(m2);
+
+        R1[R1 > 1.0] = 1.0;
+        R2[R2 > 1.0] = 1.0;
+
+
+        m3_i =
+            asInteger(
+                count3 > 0
+            );
+
+        R2_eff =
+            1.0 -
+            (1.0 - R2) *
+            (
+                1.0 -
+                cross_resistance * m3_i
+            );
+
+
+        mean_R1 =
+            mean(R1);
+
+        var_R1 =
+            mean(R1 * R1) -
+            mean_R1 * mean_R1;
+
+        if (var_R1 < 0.0)
+            var_R1 = 0.0;
+
+        sd_R1 =
+            sqrt(var_R1);
+
+
+        mean_R2 =
+            mean(R2);
+
+        var_R2 =
+            mean(R2 * R2) -
+            mean_R2 * mean_R2;
+
+        if (var_R2 < 0.0)
+            var_R2 = 0.0;
+
+        sd_R2 =
+            sqrt(var_R2);
+
+
+        mean_R2_eff =
+            mean(R2_eff);
+
+        var_R2_eff =
+            mean(R2_eff * R2_eff) -
+            mean_R2_eff * mean_R2_eff;
+
+        if (var_R2_eff < 0.0)
+            var_R2_eff = 0.0;
+
+        sd_R2_eff =
+            sqrt(var_R2_eff);
+
+
+        frac_R2_eff_ge_05 =
+            sum(R2_eff >= 0.5) / N;
+
+        frac_R2_eff_ge_09 =
+            sum(R2_eff >= 0.9) / N;
+    }
+
+
+    row = c(
+        patient_id,
+        t,
+        sim.cycle,
+        N,
+        freq_m1,
+        freq_m2,
+        freq_m3,
+        mean_R1,
+        sd_R1,
+        mean_R2,
+        sd_R2,
+        mean_R2_eff,
+        sd_R2_eff,
+        frac_R2_eff_ge_05,
+        frac_R2_eff_ge_09,
+        base_mut_rate,
+        dose_drug_1_mono,
+        dose_drug_2_mono,
+        patient_turnover,
+        draw_m1,
+        draw_m2,
+        draw_m3,
+        cross_resistance,
+        d1_seed
+    );
+
+    writeFile(
+        prefix_file,
+        paste(row, sep=","),
+        append=T
+    );
+
+
+    if (N == 0)
+    {
+        sim.simulationFinished();
+        return;
+    }
+
+
+    if (
+        N >
+        relapse_cap_factor *
+        (2^expansion_time)
+    )
+    {
+        sim.simulationFinished();
+        return;
+    }
+
+
+    if (t >= prefix_length - 1)
+    {
+        sim.simulationFinished();
+        return;
+    }
+}

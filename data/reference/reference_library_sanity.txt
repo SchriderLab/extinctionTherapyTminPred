@@ -1,0 +1,52 @@
+checked 500/10000
+checked 1000/10000
+checked 1500/10000
+checked 2000/10000
+checked 2500/10000
+checked 3000/10000
+checked 3500/10000
+checked 4000/10000
+checked 4500/10000
+checked 5000/10000
+checked 5500/10000
+checked 6000/10000
+checked 6500/10000
+checked 7000/10000
+checked 7500/10000
+checked 8000/10000
+checked 8500/10000
+checked 9000/10000
+checked 9500/10000
+checked 10000/10000
+
+========================================================================
+HYBRID ABC REFERENCE LIBRARY SANITY
+========================================================================
+manifest refs:  10000
+completed:      10000
+ABC usable:     9992
+usable fraction: 99.920%
+
+Problems:
+problem
+OK                      9992
+tmin_not_after_scan3       8
+
+unique usable hashes: 9992
+exact duplicates: 0
+duplicate fraction: 0.0
+
+expansion seed recovery count: 2490
+
+=== PARAMETER COVERAGE: PATIENTS VS REFERENCE ===
+    parameter  patient_min  patient_median  patient_max  reference_min  reference_median  reference_max
+base_mut_rate 1.019581e-08    3.003267e-08 4.951930e-08   1.000233e-08      2.999953e-08   4.999733e-08
+  dose_drug_1 6.009400e-01    6.998817e-01 7.993599e-01   6.000101e-01      7.000045e-01   7.999953e-01
+  dose_drug_2 5.000352e-01    5.603392e-01 7.235469e-01   5.000017e-01      5.630413e-01   7.470104e-01
+turnover_rate 1.017803e-01    1.999259e-01 2.996027e-01   1.000139e-01      1.999919e-01   2.999906e-01
+      draw_m2 2.518419e-01    4.518151e-01 6.486424e-01   2.500154e-01      4.500000e-01   6.499794e-01
+
+WROTE: /users/w/a/wang0207/cancer_rescue/cancer_sims/abc_ref_hybrid_regen80_v1_10k/abc_reference_features_all.csv
+WROTE: /users/w/a/wang0207/cancer_rescue/cancer_sims/abc_ref_hybrid_regen80_v1_10k/abc_reference_features_usable.csv
+
+PASS: hybrid ABC reference library is complete and internally consistent.

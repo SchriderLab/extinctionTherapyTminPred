@@ -1,0 +1,264 @@
+// ============================================================
+// PHASE A
+// Expand one heterogeneous patient ONCE and save the
+// pretreatment state as a binary SLiM population snapshot.
+// ============================================================
+
+initialize()
+{
+    initializeSLiMModelType("nonWF");
+
+    defineConstant("Q", 1000);
+    defineConstant("expansion_time", 20);
+
+    defineConstant(
+        "mut_rate",
+        base_mut_rate * Q
+    );
+
+    defineConstant(
+        "fitness_scaling",
+        1.0 - patient_turnover
+    );
+
+    initializeMutationType(
+        "m1",
+        1.0,
+        "s",
+        "return rlnorm(1, -0.635825624, 0.5);"
+    );
+
+    initializeMutationType(
+        "m2",
+        1.0,
+        "s",
+        "return rlnorm(1, -0.635825624, 0.5);"
+    );
+
+    initializeMutationType(
+        "m3",
+        1.0,
+        "f",
+        0.0
+    );
+
+    m1.mutationStackPolicy = "s";
+    m2.mutationStackPolicy = "s";
+    m3.mutationStackPolicy = "f";
+
+    initializeGenomicElementType(
+        "g1",
+        c(m1,m2,m3),
+        c(draw_m1,draw_m2,draw_m3)
+    );
+
+    initializeGenomicElement(
+        g1,
+        0,
+        0
+    );
+
+    initializeMutationRate(
+        mut_rate
+    );
+
+    initializeRecombinationRate(
+        0.0
+    );
+}
+
+
+mutationEffect(m1)
+{
+    return 1.0;
+}
+
+mutationEffect(m2)
+{
+    return 1.0;
+}
+
+mutationEffect(m3)
+{
+    return 1.0;
+}
+
+
+reproduction()
+{
+    subpop.addCloned(
+        individual
+    );
+}
+
+
+// No treatment during expansion.
+fitnessEffect(p1)
+{
+    return 1.0;
+}
+
+
+function (void) write_meta(string$ status)
+{
+    N = p1.individualCount;
+
+    mean_R1 = 0.0;
+    mean_R2 = 0.0;
+    mean_R2_eff = 0.0;
+
+    if (N > 0)
+    {
+        inds = p1.individuals;
+
+        R1 =
+            inds.sumOfMutationsOfType(m1);
+
+        R2 =
+            inds.sumOfMutationsOfType(m2);
+
+        R1[R1 > 1.0] = 1.0;
+        R2[R2 > 1.0] = 1.0;
+
+        m3_i =
+            asInteger(
+                inds.countOfMutationsOfType(m3) > 0
+            );
+
+        R2_eff =
+            1.0 -
+            (1.0 - R2) *
+            (
+                1.0 -
+                cross_resistance * m3_i
+            );
+
+        mean_R1 = mean(R1);
+        mean_R2 = mean(R2);
+        mean_R2_eff = mean(R2_eff);
+    }
+
+    header = c(
+        "patient_id",
+        "status",
+        "expansion_seed",
+        "cycle",
+        "N",
+        "base_mut_rate",
+        "dose_drug_1",
+        "dose_drug_2",
+        "turnover_rate",
+        "draw_m1",
+        "draw_m2",
+        "draw_m3",
+        "cross_resistance",
+        "mean_R1",
+        "mean_R2",
+        "mean_R2_eff"
+    );
+
+    row = c(
+        patient_id,
+        status,
+        expansion_seed,
+        sim.cycle,
+        N,
+        base_mut_rate,
+        dose_drug_1_mono,
+        dose_drug_2_mono,
+        patient_turnover,
+        draw_m1,
+        draw_m2,
+        draw_m3,
+        cross_resistance,
+        mean_R1,
+        mean_R2,
+        mean_R2_eff
+    );
+
+    writeFile(
+        meta_file,
+        paste(header, sep=",")
+    );
+
+    writeFile(
+        meta_file,
+        paste(row, sep=","),
+        append=T
+    );
+}
+
+
+function (void) check_population(void)
+{
+    if (p1.individualCount == 0)
+    {
+        write_meta(
+            "pre_treatment_extinction"
+        );
+
+        sim.simulationFinished();
+        return;
+    }
+
+    target_N =
+        2^expansion_time;
+
+    if (
+        p1.individualCount <
+        target_N -
+        0.10 * target_N
+    )
+    {
+        community.registerEarlyEvent(
+            NULL,
+            "{check_population();}",
+            sim.cycle + 1,
+            sim.cycle + 1
+        );
+
+        return;
+    }
+
+    // --------------------------------------------------------
+    // Exactly one persistent checkpoint per patient.
+    // Binary is substantially faster/smaller than text.
+    // --------------------------------------------------------
+
+    sim.outputFull(
+        snapshot_file,
+        binary=T
+    );
+
+    write_meta(
+        "viable"
+    );
+
+    sim.simulationFinished();
+}
+
+
+1 early()
+{
+    sim.addSubpop(
+        "p1",
+        1
+    );
+
+    community.registerEarlyEvent(
+        NULL,
+        "{check_population();}",
+        sim.cycle + 1,
+        sim.cycle + 1
+    );
+}
+
+
+early()
+{
+    if (exists("p1"))
+    {
+        p1.fitnessScaling =
+            fitness_scaling;
+    }
+}

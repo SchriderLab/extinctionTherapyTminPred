@@ -1,0 +1,34 @@
+FINAL SIMULATION RESULTS NUMBERS
+================================
+Patients: 80
+Candidate second-strike lags: 20
+Post-switch replicates per lag: 10
+Counterfactual outcome runs: 16,000
+Extinct by cycle 300: 6,542 (40.9%)
+Patients with no extinction at any tested lag: 9/80
+
+Patient t_min: mean 8.725, SD 1.630, median 9, range 5-12
+ABC reference library: n=9,983, t_min support 4-18
+
+4-scan ABC t_min prediction
+MAE: 0.882708
+Median absolute error: 0.641015
+RMSE: 1.137325
+Bias: -0.029648
+Within 0.5 cycle: 36.2%
+Within 1 cycle: 63.7%
+Within 2 cycles: 91.2%
+
+Treatment policies
+ABC mean extinction: 0.70375
+True-t_min mean extinction: 0.69750
+Oracle mean extinction: 0.77000
+Mean oracle regret of ABC: 0.06625
+Mean nadir-policy gap: 0.07250
+Mean prediction displacement effect: -0.00625
+ABC / tie / true-t_min: 9 / 63 / 8
+Zero estimated oracle regret: 58/80
+
+Dense reactive benchmark
+Dense mean extinction: 0.70125
+ABC / tie / dense: 11 / 61 / 8

@@ -1,0 +1,16 @@
+{
+  "attempted_references": 10000,
+  "completed_references": 10000,
+  "abc_usable_references": 9992,
+  "usable_fraction": 0.9992,
+  "unique_trajectory_hashes": 9992,
+  "exact_duplicate_count": 0,
+  "exact_duplicate_fraction": 0.0,
+  "scan_times": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "model": "hybrid quantitative resistance; same generator as regenerated80 cohort"
+}
