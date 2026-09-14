@@ -42,7 +42,7 @@ extinctionTherapyTminPred/
 
 - `sims/hybrid_regen80_expand.slim`
 - `sims/hybrid_regen80_prefix.slim`
-- `sims/hybrid_regen80_outcome.slim`
+- `sims/hybrid_regen80_outcome_extend300.slim`
 
 ## Main analysis scripts
 
