@@ -1,0 +1,9 @@
+# Default *private clinical + public simulation* paper workflow.
+# Configure local_frozen.yaml and clinical.local.yaml before running.
+# Switching to this target can never select the SLiM regeneration branch.
+extends: [local_frozen.yaml]
+mode: frozen
+run_dir: results/runs/paper_frozen_clinical
+clinical:
+  enabled: true
+  workspace: private/runs/paper_frozen_clinical

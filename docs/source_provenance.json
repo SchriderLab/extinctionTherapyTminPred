@@ -1,0 +1,212 @@
+[
+  {
+    "source": "cancer_sims/sims/hybrid_regen80_expand.slim",
+    "sha256": "428b9bc536d7b1412ff2ce533dff2bff51058879e5aa7cba00982dcac3ff759b",
+    "destination": "models/quantitative_resistance.slim",
+    "changes": "Combined callbacks under phase=expand; shared quantitative mutation/reproduction/fitness definitions; census code retained.",
+    "ported_sha256": "ebef357d26a126f6bf5cf844a8948a9711efbb041b4c3f544a3af04276ec4dad"
+  },
+  {
+    "source": "cancer_sims/sims/hybrid_regen80_prefix.slim",
+    "sha256": "ffdbc0f944164468b6f04e69464b88254df497c4a9ee867428901c53aba7ccf3",
+    "destination": "models/quantitative_resistance.slim",
+    "changes": "Combined callbacks under phase=prefix; shared quantitative mutation/reproduction/fitness definitions; census code retained.",
+    "ported_sha256": "ebef357d26a126f6bf5cf844a8948a9711efbb041b4c3f544a3af04276ec4dad"
+  },
+  {
+    "source": "cancer_sims/sims/hybrid_regen80_outcome_extend300.slim",
+    "sha256": "e4705d239c1abc5807fe2c5ea015ffad68022f8a429b9ef699e95c74656f4e26",
+    "destination": "models/quantitative_resistance.slim",
+    "changes": "Combined callbacks under phase=outcome; shared quantitative mutation/reproduction/fitness definitions; census code retained.",
+    "ported_sha256": "ebef357d26a126f6bf5cf844a8948a9711efbb041b4c3f544a3af04276ec4dad"
+  },
+  {
+    "source": "cancer_sims/sims/venice_singlepop_m1fitness_v1.slim",
+    "sha256": "9ec29a8fff438e1b4ea9e189bc4359d2efd171f7db8773e144a872033e58f373",
+    "destination": "models/quantitative_resistance.slim",
+    "changes": "Combined callbacks under phase=clinical_single; shared quantitative mutation/reproduction/fitness definitions; census code retained.",
+    "ported_sha256": "ebef357d26a126f6bf5cf844a8948a9711efbb041b4c3f544a3af04276ec4dad"
+  },
+  {
+    "source": "cancer_sims/sims/venice_multicolony_m1fitness_v1.slim",
+    "sha256": "ee5c36d4fa7fec4e7fc6bfd12b53f4b8bae6b98045b99807ce2b0821a34f0fb1",
+    "destination": "models/quantitative_resistance.slim",
+    "changes": "Combined callbacks under phase=clinical_compartments; shared quantitative mutation/reproduction/fitness definitions; census code retained.",
+    "ported_sha256": "ebef357d26a126f6bf5cf844a8948a9711efbb041b4c3f544a3af04276ec4dad"
+  },
+  {
+    "source": "cancer_sims/scripts/rebuild_frozen_venice_targets.py",
+    "sha256": "43e4ca64b0f907ab04af1dcb088f7ada69079c155d67bbcd2a4026fbe2d418d1",
+    "destination": "workflow/clinical/rebuild_frozen_venice_targets.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "0d0f14e5039980d845a8f749f9766002f45a2fa52be5b8c4142d5aa74f922458"
+  },
+  {
+    "source": "working_repo/scripts/run_venice_abc_horizon.py",
+    "sha256": "6c9daaa50576654a194967538a7b927248db0114362ba42fcce74b884fb935a6",
+    "destination": "workflow/clinical/run_venice_abc_horizon.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "2ec5040fa47a35bacdde5cca57fea62538d0fae6a00fc16452efce3e58d38573"
+  },
+  {
+    "source": "working_repo/scripts/run_venice_within_cohort_cv.py",
+    "sha256": "ddc6c1df3d3e2b2401bea19bee86acbf8b2b62f4e9badd3307521bd8b4e2a0c2",
+    "destination": "workflow/clinical/run_venice_within_cohort_cv.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().; retain only reported Ridge and median predictions; omit unreported KNN/HGB loops and diagnostic plot.",
+    "ported_sha256": "79c1c1a80c3c4f96fc50302a01e3e0fd3a762dea7e0898461a31e168714ee328"
+  },
+  {
+    "source": "working_repo/scripts/run_venice_simulation_gp.py",
+    "sha256": "47f6bb774f4a263d06e609b21067fe665009b26c270f36b82d54ed530c72fc8e",
+    "destination": "workflow/clinical/run_venice_simulation_gp.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "b3187f8fb58de7f7f3321b88d6f42fe08587e0809310deffdccfca8b7b630177"
+  },
+  {
+    "source": "cancer_sims/scripts/build_mainsail_forecasting_cohort.py",
+    "sha256": "9df5f786ca0948b481ad61663094a746888abac67b5764b4834523d6f6fa55b9",
+    "destination": "workflow/clinical/build_mainsail_forecasting_cohort.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "c53069e3ec30ad1e0b04d43cc3b6eeb5801093d01d0f98b9ac1f8a69ecc68536"
+  },
+  {
+    "source": "cancer_sims/scripts/run_mainsail_4step_validation.py",
+    "sha256": "bdaffc17a76f068a64c1b78f4296d7c7390beed3bf58ae9be9721a2ab297bce3",
+    "destination": "workflow/clinical/run_mainsail_4step_validation.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().; unreported step4 execution removed, steps1\u20133 retained.",
+    "ported_sha256": "ebf261b1f214297e036ea12a77a7f4449ecac4293bd436f6be36fa438be19012"
+  },
+  {
+    "source": "cancer_sims/scripts/build_venice_exponential_cloud.py",
+    "sha256": "7894b78519da357649768f464aaeace073a11708186229a846df5407714eca9e",
+    "destination": "workflow/clinical/build_venice_exponential_cloud.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "1a9747c8bfa90184797a5c613378fb086c4f4f5f856e81e349818118bc693210"
+  },
+  {
+    "source": "cancer_sims/scripts/analyze_venice_heterogeneous_cloud.py",
+    "sha256": "614c5ae9b8a87559b6e4cf98dcef1eefde8fa01186701f8dcd65de8ffcfd033a",
+    "destination": "workflow/clinical/analyze_venice_heterogeneous_cloud.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "3c0f53cf81f018cb207cddacf0d13d6f9fa0838204e8c764d9bfce9d0626ef07"
+  },
+  {
+    "source": "cancer_sims/scripts/match_venice_to_simulations.py",
+    "sha256": "95ab287da25572f4dd5f72274be5abf70be4e26f3496436fcdcd5abd90767b7e",
+    "destination": "workflow/clinical/match_venice_to_simulations.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "baf0bd9918d7101faf9cbd6c53fb2acc5b97f1b72d84f1e8b7d4a0aae97bd2e3"
+  },
+  {
+    "source": "cancer_sims/scripts/build_venice_k1_abc_reference_features.py",
+    "sha256": "bcf384e0c48ab876006b014f351e3631eea1a8027306108e4c04fd37085ebcd6",
+    "destination": "workflow/clinical/build_venice_k1_abc_reference_features.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "21c2dd64c6489ed392bf044fa72560bf2c9542d124994001514d48a668d535fb"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_k1_abc_real_4scan.py",
+    "sha256": "ca13c4d26220ea4fbfdb09c1d0089f5a5a4e25acdf95ade1702ab6f418052010",
+    "destination": "workflow/clinical/run_venice_k1_abc_real_4scan.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "c73a8e9d96c35fdf9ab75c8229e8cffd952795e6aa642d1ae1dfe5ef8b34f5ed"
+  },
+  {
+    "source": "cancer_sims/scripts/evaluate_exponential_nadir_vs_observed_psa.py",
+    "sha256": "0fbdc60be7b1803f8ed33846694df8228c5ec596f8e7a57a1875f9e1aa897bbc",
+    "destination": "workflow/clinical/evaluate_exponential_nadir_vs_observed_psa.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "1a7b43c3f1f7669ea753fca9fec99a847add0811095f135365578c1890051aec"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_k1_abc_scan_budget.py",
+    "sha256": "570de1a9166dc26e08fdba270db70c84279dc8e63da1bb26eea5587f7d443788",
+    "destination": "workflow/clinical/run_venice_k1_abc_scan_budget.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "da01f2be6918d25d6903709e9067e7120d8919f46303fed33393215e2b17805b"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_xgboost_tmin.py",
+    "sha256": "71607a1efbd717cc22c363bd6eed17d0acec1e728216477c305ce0b3a671bcd0",
+    "destination": "workflow/clinical/run_venice_xgboost_tmin.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "cae68896bf071f7374c1f347efac0b0bde71ffd5e86fbac20bc752ec4d6098e5"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_abc_reference_downsampling.py",
+    "sha256": "dfcb864f1a2c34d89192f64349b62bc182b9daf5a427fb6c422413c8a7c628c6",
+    "destination": "workflow/clinical/run_venice_abc_reference_downsampling.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "191ba2bd78bf641331c0aa894a67198d3ecf25cb758ed4286c68ed9eb8e39e14"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_k1_binary_tmin8.py",
+    "sha256": "0cbe925a8b642a306fad0ca4a77a5c95a11ab50599b91262de8ef20212172299",
+    "destination": "workflow/clinical/run_venice_k1_binary_tmin8.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "f176f125c4310afc93761abd14da4cdcd01a4a46a348b34e73d470c0068360cc"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_k1_rejection_abc_tmin8.py",
+    "sha256": "48345a43abf069d945271f49bec3c5502c7c42e9ac473accd9a7f352348a5f68",
+    "destination": "workflow/clinical/run_venice_k1_rejection_abc_tmin8.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "1cc1b8de005d4f94318e831a3e9c6b0cd069e2346b981beae9c490570d9658b8"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_hierarchical_biexponential_empirical.py",
+    "sha256": "616ed26ffaf9eb492999bf802ee7805221b1740b0e26f684deaba22616412e7a",
+    "destination": "workflow/clinical/run_venice_hierarchical_biexponential_empirical.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "d552902f213006126076dbd2895bab22096077a493f827a27700fb42e1347378"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_qg_joint_prior_ablation.py",
+    "sha256": "798bdfe778cfbe1d85d032ee5ec1b5d3f0ace781ca43ab8ceee4d72db70a47c0",
+    "destination": "workflow/clinical/run_venice_qg_joint_prior_ablation.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().; frozen split-only CSV bound to data/clinical/qg_folds.csv.",
+    "ported_sha256": "563c3bf9e49c1d4fdbf13cc8b7ed6dd337d756d1ca1955a5f3816d71c4434c69"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_binary_final_checks.py",
+    "sha256": "c5de434583099734b748226784113ef830415ef71085c3754c3dc22a668fa285",
+    "destination": "workflow/clinical/run_venice_binary_final_checks.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "51048264efa9734d6413e52e05433f22883789c72293d00f3dd2aa0d651a78f8"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_sequential_nadir_risk.py",
+    "sha256": "7ab46c18e67a9981e4cacf531f9aa27193e75950a614a147a09bd778c212c08d",
+    "destination": "workflow/clinical/run_venice_sequential_nadir_risk.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().; standalone main/E10 execution removed; E11 helper functions retained.",
+    "ported_sha256": "0bb87216ce9b433a7c80b451b68bf2e45d9edd70747c54ef0b1ea75eec78ee96"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_bayesian_state_nadir.py",
+    "sha256": "3d9970fae115d81f64f420b0aa76f425bd29fbb75ad9fc865451e51f76480f4e",
+    "destination": "workflow/clinical/run_venice_bayesian_state_nadir.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().; standalone main/E10 execution removed; E11 helper functions retained.",
+    "ported_sha256": "d96929d802894a8c737c3bb373305cbac13e55190f782c1a6676dff9a9f73039"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_physics_reinforced_nadir.py",
+    "sha256": "29555f44d3590c1b1473eb27ab939ee80596e129286b4bb08437a0aa8b7c923b",
+    "destination": "workflow/clinical/run_venice_physics_reinforced_nadir.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().; standalone main/E10 execution removed; E11 helper functions retained.",
+    "ported_sha256": "b3a21234ffc414d95a9f18acb70a3c22f5e3e551764579917c1752cf48e7b606"
+  },
+  {
+    "source": "cancer_sims/scripts/run_venice_nadir_window_pm1.py",
+    "sha256": "348da8201b21e9a418d22c183e5f147a6a352dbf331701c53b4737a5a534ccde",
+    "destination": "workflow/clinical/run_venice_nadir_window_pm1.py",
+    "changes": "AST-equivalent numerical kernel; fixed project Path() roots -> workspace_path(); n_jobs=-1 -> allocated_threads().",
+    "ported_sha256": "135ac6fe31323e3b7a42fe79738914aeeea7f7f5e187f08da5ee0ff2aec439d2"
+  },
+  {
+    "source": "cancer_sims/venice_decline_filter_audit/reproduce_venice_decline_audit.py",
+    "sha256": "c01e8b15c819e2b4cb72b7ffdee9b56333ea1e559662f25875fb1fb6cb6016f1",
+    "destination": "workflow/clinical/reproduce_venice_decline_audit.py",
+    "changes": "Required E11 preprocessing; path binding only.",
+    "ported_sha256": "7c6e3af5aef04885e555369284ffa11648b431ccbc74d20929bf879857cc4149"
+  }
+]

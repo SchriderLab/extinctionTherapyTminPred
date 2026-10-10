@@ -16,3 +16,19 @@ reproduced_results/
 *.trees
 *.bin
 *.snapshot
+# BEGIN frozen-manuscript-workflow
+.snakemake/
+logs/
+results/runs/
+private/
+validation_reports/
+config/local*.yaml
+config/clinical.local.yaml
+config/paper.local.yaml
+data/frozen/imported/
+__pycache__/
+.pytest_cache/
+*.bin
+*.snapshot
+*.trees
+# END frozen-manuscript-workflow

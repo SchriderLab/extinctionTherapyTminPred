@@ -1,0 +1,3 @@
+extends: [primary.yaml]
+run_dir: results/runs/from_frozen
+mode: frozen

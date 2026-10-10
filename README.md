@@ -98,3 +98,19 @@ complete set of raw reference-library trajectory files are intentionally not
 tracked. The frozen tables required for the reported analyses are included.
 The subset of reference trajectories required to reproduce the supplementary
 reference-support figure is also included.
+
+## Manuscript-only, frozen-data workflow
+
+A reproducible Snakemake pipeline is available in `Snakefile`. It reads the
+committed `data/cohort/` and `data/reference/` inputs; **new patient simulation
+is unnecessary** for reproducing the paper. See
+[`docs/PUBLIC_INTEGRATION.md`](docs/PUBLIC_INTEGRATION.md) for Longleaf commands.
+
+For the public simulation analysis (no SLiM):
+
+```bash
+bash hpc/submit_frozen.sh config/public_frozen.yaml reproduce_frozen
+```
+
+The complete clinical workflow additionally requires separately configured,
+private VENICE/MAINSAIL inputs. Do not commit clinical raw data.

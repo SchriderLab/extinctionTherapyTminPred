@@ -1,0 +1,12 @@
+executor: slurm
+jobs: 24
+latency-wait: 120
+rerun-incomplete: true
+printshellcmds: true
+max-jobs-per-second: 2
+max-status-checks-per-second: 2
+default-resources:
+  mem_mb: 4000
+  runtime: 120
+# Set slurm_account/slurm_partition here only when required by your allocation.
+# The controller itself is submitted to a compute node by hpc/submit.sh.

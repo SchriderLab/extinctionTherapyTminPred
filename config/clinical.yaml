@@ -1,0 +1,50 @@
+# Required raw/derived inputs are linked into a NEW ignored workspace by configure_inputs.py.
+# The original E02 library and E08b split table are explicit frozen inputs.
+library_mode: saved  # saved: use exact existing libraries; generate: regenerate K5 and K1 with the shared engine.
+inputs: {}
+calibration:
+  phase: clinical_compartments
+  n: 1000
+  seed: 20260921
+  seed_base: 4200000000
+  batch_size: 20
+  max_retries: 10
+  prefix_length: 80
+  relapse_factor: 4.0
+  d_quantiles: [0.05, 0.95]
+  turnover: [0.05, 0.40]
+  mutation_rate: [1.0e-9, 1.0e-7]
+  m1_mean_effect: [0.20, 0.90]
+  m1_sdlog: [0.15, 0.80]
+  age_range: [15, 23]
+  standing:
+    median: 0.035
+    sdlog: 1.20
+    clip: [0.0001, 0.35]
+    zero_probability: 0.10
+forecasting:
+  phase: clinical_single
+  n: 10000
+  seed: 20260922
+  seed_base: 5200000000
+  n_founders: 5
+  batch_size: 20
+  max_retries: 10
+  prefix_length: 80
+  relapse_factor: 4.0
+  d_quantiles: [0.05, 0.95]
+  turnover: [0.05, 0.40]
+  mutation_rate: [1.0e-9, 1.0e-7]
+  m1_mean_effect: [0.20, 0.90]
+  m1_sdlog: [0.15, 0.80]
+  age_range: [15, 23]
+  standing:
+    median: 0.035
+    sdlog: 1.20
+    clip: [0.0001, 0.35]
+    zero_probability: 0.10
+# Only declared CLI arguments are passed; no numerical constants are monkeypatched.
+arguments:
+  direct: [--scale, '2.25', --forecast-horizon, '12', --k, '25', --slope-weight, '2.0', --support-quantile, '0.95', --bootstrap, '2000', --seed, '20260915']
+  scan_budget: [--min-scans, '2', --max-scans, '6']
+  window: [--cluster-bootstrap, '1000', --seed, '20260924', --l2, '1.0', --rise-frac, '0.0']

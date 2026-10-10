@@ -1,0 +1,210 @@
+{
+  "version": "3.0",
+  "dpi": 600,
+  "cohort_expected_counts": [
+    936,
+    612,
+    506,
+    482,
+    268,
+    263
+  ],
+  "fixed_scan_expected_n": 133,
+  "calibration_scenario": "broad_mix",
+  "calibration_description": "Historical five-compartment heterogeneous library and its own full-trajectory matching output; not the later K=1 ABC library",
+  "sources": {
+    "adsl": {
+      "paths": [
+        "{root}/data/venice_csv/adsl.csv"
+      ]
+    },
+    "adlb": {
+      "paths": [
+        "{root}/data/venice_csv/adlb.csv"
+      ]
+    },
+    "direct_abc": {
+      "paths": [
+        "{repo}/data/source_data/venice_abc_horizon/venice_abc_horizon_predictions.csv",
+        "{root}/data/source_data/venice_abc_horizon/venice_abc_horizon_predictions.csv"
+      ]
+    },
+    "direct_summary": {
+      "paths": [
+        "{repo}/data/source_data/venice_abc_horizon/venice_abc_horizon_summary.txt",
+        "{root}/data/source_data/venice_abc_horizon/venice_abc_horizon_summary.txt"
+      ]
+    },
+    "early_clinical": {
+      "paths": [
+        "{repo}/data/source_data/venice_within_cohort_cv/venice_repeated_cv_predictions_by_patient.csv",
+        "{root}/data/source_data/venice_within_cohort_cv/venice_repeated_cv_predictions_by_patient.csv"
+      ]
+    },
+    "gp": {
+      "paths": [
+        "{repo}/data/source_data/venice_simulation_gp/simulation_gp_cv_predictions_by_patient.csv",
+        "{root}/data/source_data/venice_simulation_gp/simulation_gp_cv_predictions_by_patient.csv"
+      ]
+    },
+    "exp_cloud": {
+      "paths": [
+        "{root}/data/source_data/exponential_cloud/venice_exponential_cloud_per_patient.csv"
+      ]
+    },
+    "exp_agreement": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/exponential_nadir_vs_observed_psa/exponential_vs_observed_psa_patient_level.csv"
+      ]
+    },
+    "sim_fits": {
+      "paths": [
+        "{root}/venice_heterogeneous_cloud_v1/analysis/patient_fits.csv"
+      ]
+    },
+    "matches": {
+      "paths": [
+        "{root}/venice_heterogeneous_cloud_v1/patient_matching/venice_patient_mechanistic_matches.csv"
+      ]
+    },
+    "scan_predictions": {
+      "paths": [],
+      "directories": [
+        "{root}/venice_k1_abc_reference_10k/venice_scan_budget_global_tmin_v1"
+      ],
+      "glob": "*predictions*.csv",
+      "required_header": [
+        [
+          "id",
+          "USUBJID",
+          "patient_id"
+        ],
+        [
+          "scan_count"
+        ],
+        [
+          "global_fit_tmin",
+          "true_tmin",
+          "target_tmin"
+        ],
+        [
+          "pred_tmin_weighted",
+          "pred_tmin"
+        ]
+      ],
+      "columns": {},
+      "filters": {},
+      "description": "Set path to fixed-common patient-level predictions. No changing-cohort pooling."
+    },
+    "scan_summary": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/venice_scan_budget_global_tmin_v1/scan_budget_fixed_common_summary.csv"
+      ]
+    },
+    "scan_reference_cv": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/venice_scan_budget_global_tmin_v1/scan_budget_clinical_summary.csv"
+      ]
+    },
+    "binary": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/venice_binary_tmin8_v1/binary_tmin8_venice_predictions.csv"
+      ]
+    },
+    "binary_summary": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/venice_binary_tmin8_v1/binary_tmin8_venice_summary.csv"
+      ]
+    },
+    "rejection": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/venice_rejection_abc_tmin8_v1/rejection_venice_summary.csv"
+      ]
+    },
+    "xgb": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/venice_xgboost_tmin_v1/xgb_venice_summary.csv"
+      ]
+    },
+    "downsampling": {
+      "paths": [],
+      "directories": [
+        "{root}/venice_k1_abc_reference_10k/venice_reference_downsampling_v1",
+        "{root}/venice_k1_abc_reference_10k/venice_abc_reference_downsampling_v1"
+      ],
+      "glob": "downsampling_summary.csv",
+      "required_header": [
+        [
+          "reference_size"
+        ],
+        [
+          "MAE_mean"
+        ]
+      ]
+    },
+    "eb": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/hierarchical_biexponential_empirical_v1/hierarchical_biexponential_predictions.csv"
+      ]
+    },
+    "qg_summary": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/qg_joint_prior_ablation_v1/qg_joint_vs_shuffled_summary.csv"
+      ]
+    },
+    "covariates": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/venice_binary_final_checks_v1/binary_feature_ablation_summary.csv"
+      ]
+    },
+    "learning": {
+      "paths": [
+        "{root}/venice_k1_abc_reference_10k/venice_binary_final_checks_v1/binary_learning_curve_summary.csv"
+      ]
+    },
+    "pm1": {
+      "paths": [
+        "{root}/data/source_data/venice_nadir_window_pm1_v1/pm1_window_oof_predictions.csv"
+      ]
+    },
+    "audit_psa": {
+      "paths": [
+        "{root}/venice_decline_filter_audit/all_scheduled_psa.csv"
+      ],
+      "columns": {
+        "id": "USUBJID"
+      }
+    },
+    "main_reg": {
+      "paths": [
+        "{root}/data/source_data/mainsail_validation/step1_mainsail_regression_all_predictions.csv"
+      ]
+    },
+    "main_bin": {
+      "paths": [
+        "{root}/data/source_data/mainsail_validation/step2_mainsail_binary_cutoff7_predictions.csv"
+      ]
+    },
+    "vm_reg": {
+      "paths": [
+        "{root}/data/source_data/mainsail_validation/step3_regression_VENICE_to_MAINSAIL.csv"
+      ]
+    },
+    "mv_reg": {
+      "paths": [
+        "{root}/data/source_data/mainsail_validation/step3_regression_MAINSAIL_to_VENICE.csv"
+      ]
+    },
+    "vm_bin": {
+      "paths": [
+        "{root}/data/source_data/mainsail_validation/step3_binary_VENICE_to_MAINSAIL.csv"
+      ]
+    },
+    "mv_bin": {
+      "paths": [
+        "{root}/data/source_data/mainsail_validation/step3_binary_MAINSAIL_to_VENICE.csv"
+      ]
+    }
+  },
+  "fixed_scan_ids_from": "binary"
+}

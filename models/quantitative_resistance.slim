@@ -1,0 +1,1097 @@
+// One quantitative-resistance engine; select phase with -d phase='...'.
+// Derived from the author's five supplied phase/configuration implementations.
+// Source checksums and unchanged numerical conventions: docs/model_semantics.md.
+initialize()
+{
+    initializeSLiMModelType("nonWF");
+    if (!exists("phase")) stop("Supply phase: expand, prefix, outcome, clinical_single, or clinical_compartments");
+    if (!exists("Q")) defineConstant("Q", 1000);
+    if (!exists("expansion_time")) defineConstant("expansion_time", 20);
+    if (!exists("prefix_length")) defineConstant("prefix_length", 20);
+    if (!exists("treatment_time")) defineConstant("treatment_time", 300);
+    if (!exists("relapse_cap_factor")) defineConstant("relapse_cap_factor", 1.5);
+    if (!exists("patient_relapse_factor")) defineConstant("patient_relapse_factor", 4.0);
+    if (!exists("m1_meanlog")) defineConstant("m1_meanlog", -0.635825624);
+    if (!exists("m1_sdlog")) defineConstant("m1_sdlog", 0.5);
+    if (!exists("m2_meanlog")) defineConstant("m2_meanlog", -0.635825624);
+    if (!exists("m2_sdlog")) defineConstant("m2_sdlog", 0.5);
+    if (!exists("dose_drug_2_mono")) defineConstant("dose_drug_2_mono", 0.0);
+    if (!exists("n_founders")) defineConstant("n_founders", 5);
+    if (!exists("m1_effect_mean_target")) defineConstant("m1_effect_mean_target", exp(m1_meanlog + 0.5*m1_sdlog*m1_sdlog));
+    defineConstant("mut_rate", base_mut_rate * Q);
+    defineConstant("fitness_scaling", 1.0 - patient_turnover);
+    defineGlobal("treatment_start_cycle", -1);
+    defineGlobal("dose_drug_1", 0.0);
+    defineGlobal("dose_drug_2", 0.0);
+    defineGlobal("current_drug", 0);
+    defineGlobal("switched", F);
+    defineGlobal("finished_written", F);
+    defineGlobal("N_at_original_horizon", -1);
+    defineGlobal("N_pre_switch", -1);
+    defineGlobal("mean_R2_eff_pre_switch", -1.0);
+    defineGlobal("sd_R2_eff_pre_switch", -1.0);
+    if (phase == "clinical_single")
+    {
+        defineConstant("baseline_cycle", asInteger(single_age) + 2);
+        defineConstant("treatment_cycle", baseline_cycle + 1);
+        defineConstant("start_cycle", baseline_cycle - asInteger(single_age) + 1);
+        defineGlobal("N0_total", -1);
+        defineGlobal("standing_realized", 0.0);
+    }
+    if (phase == "clinical_compartments")
+    {
+        defineConstant("K", 5);
+        defineConstant("ages", c(age1,age2,age3,age4,age5));
+        defineConstant("standing_targets", c(standing1,standing2,standing3,standing4,standing5));
+        defineConstant("baseline_cycle", asInteger(max(ages)) + 2);
+        defineConstant("treatment_cycle", baseline_cycle + 1);
+        defineConstant("start_cycles", baseline_cycle - ages + 1);
+        defineGlobal("N0_total", -1);
+        defineGlobal("N0_by_colony", rep(0,K));
+        defineGlobal("standing_realized", rep(0.0,K));
+    }
+    initializeMutationType("m1", 1.0, "s", "return rlnorm(1, m1_meanlog, m1_sdlog);");
+    initializeMutationType("m2", 1.0, "s", "return rlnorm(1, m2_meanlog, m2_sdlog);");
+    initializeMutationType("m3", 1.0, "f", 0.0);
+    m1.mutationStackPolicy = "s";
+    m2.mutationStackPolicy = "s";
+    m3.mutationStackPolicy = "f";
+    initializeGenomicElementType("g1",c(m1,m2,m3),c(draw_m1,draw_m2,draw_m3));
+    initializeGenomicElement(g1,0,0);
+    initializeMutationRate(mut_rate);
+    initializeRecombinationRate(0.0);
+}
+mutationEffect(m1) { return 1.0; }
+mutationEffect(m2) { return 1.0; }
+mutationEffect(m3) { return 1.0; }
+reproduction()
+{
+    if (phase == "clinical_compartments")
+    {
+        cid = individual.tag;
+        if (sim.cycle >= start_cycles[cid])
+        {
+            child = subpop.addCloned(individual);
+            child.tag = cid;
+        }
+    }
+    else if (phase == "clinical_single")
+    {
+        if (sim.cycle >= start_cycle) subpop.addCloned(individual);
+    }
+    else subpop.addCloned(individual);
+}
+fitnessEffect(p1)
+{
+    if (phase == "expand") return 1.0;
+    if (phase == "clinical_compartments")
+        if (sim.cycle < start_cycles[individual.tag]) return 1.0;
+    if (phase == "clinical_single")
+        if (sim.cycle < start_cycle) return 1.0;
+    R1 = individual.sumOfMutationsOfType(m1);
+    R2 = individual.sumOfMutationsOfType(m2);
+    if (R1 > 1.0) R1 = 1.0;
+    if (R2 > 1.0) R2 = 1.0;
+    m3_i = asInteger(individual.countOfMutationsOfType(m3) > 0);
+    drug1_factor = 1.0 - dose_drug_1 * (1.0-R1) * (1.0-cross_resistance*m3_i);
+    drug2_factor = 1.0 - dose_drug_2 * (1.0-R2) * (1.0-cross_resistance*m3_i);
+    if (phase == "clinical_single" | phase == "clinical_compartments")
+    {
+        drug_factor = 1.0;
+        if (sim.cycle >= treatment_cycle) drug_factor = drug1_factor;
+        return fitness_scaling * drug_factor;
+    }
+    return drug1_factor * drug2_factor;
+}
+
+function (void) write_meta(string$ status)
+{
+N = p1.individualCount;
+
+    mean_R1 = 0.0;
+    mean_R2 = 0.0;
+    mean_R2_eff = 0.0;
+
+    if (N > 0)
+    {
+        inds = p1.individuals;
+
+        R1 =
+            inds.sumOfMutationsOfType(m1);
+
+        R2 =
+            inds.sumOfMutationsOfType(m2);
+
+        R1[R1 > 1.0] = 1.0;
+        R2[R2 > 1.0] = 1.0;
+
+        m3_i =
+            asInteger(
+                inds.countOfMutationsOfType(m3) > 0
+            );
+
+        R2_eff =
+            1.0 -
+            (1.0 - R2) *
+            (
+                1.0 -
+                cross_resistance * m3_i
+            );
+
+        mean_R1 = mean(R1);
+        mean_R2 = mean(R2);
+        mean_R2_eff = mean(R2_eff);
+    }
+
+    header = c(
+        "patient_id",
+        "status",
+        "expansion_seed",
+        "cycle",
+        "N",
+        "base_mut_rate",
+        "dose_drug_1",
+        "dose_drug_2",
+        "turnover_rate",
+        "draw_m1",
+        "draw_m2",
+        "draw_m3",
+        "cross_resistance",
+        "mean_R1",
+        "mean_R2",
+        "mean_R2_eff"
+    );
+
+    row = c(
+        patient_id,
+        status,
+        expansion_seed,
+        sim.cycle,
+        N,
+        base_mut_rate,
+        dose_drug_1_mono,
+        dose_drug_2_mono,
+        patient_turnover,
+        draw_m1,
+        draw_m2,
+        draw_m3,
+        cross_resistance,
+        mean_R1,
+        mean_R2,
+        mean_R2_eff
+    );
+
+    writeFile(
+        meta_file,
+        paste(header, sep=",")
+    );
+
+    writeFile(
+        meta_file,
+        paste(row, sep=","),
+        append=T
+    );
+}
+
+function (void) check_population(void)
+{
+if (p1.individualCount == 0)
+    {
+        write_meta(
+            "pre_treatment_extinction"
+        );
+
+        sim.simulationFinished();
+        return;
+    }
+
+    target_N =
+        2^expansion_time;
+
+    if (
+        p1.individualCount <
+        target_N -
+        0.10 * target_N
+    )
+    {
+        community.registerEarlyEvent(
+            NULL,
+            "{check_population();}",
+            sim.cycle + 1,
+            sim.cycle + 1
+        );
+
+        return;
+    }
+
+    // --------------------------------------------------------
+    // Exactly one persistent checkpoint per patient.
+    // Binary is substantially faster/smaller than text.
+    // --------------------------------------------------------
+
+    sim.outputFull(
+        snapshot_file,
+        binary=T
+    );
+
+    write_meta(
+        "viable"
+    );
+
+    sim.simulationFinished();
+}
+
+function (void) start_second_strike(void)
+{
+// D1 path is fixed until this exact point.
+    // Only now branch the stochastic outcome.
+
+    setSeed(
+        asInteger(
+            treatment_seed
+        )
+    );
+
+    defineGlobal(
+        "switched",
+        T
+    );
+
+    defineGlobal(
+        "current_drug",
+        2
+    );
+
+    defineGlobal(
+        "dose_drug_1",
+        0.0
+    );
+
+    defineGlobal(
+        "dose_drug_2",
+        dose_drug_2_mono
+    );
+}
+
+function (void) finish_outcome(string$ status)
+{
+if (finished_written)
+        return;
+
+    defineGlobal(
+        "finished_written",
+        T
+    );
+
+    N =
+        p1.individualCount;
+
+    final_t =
+        sim.cycle -
+        treatment_start_cycle;
+
+    extinct_i =
+        asInteger(
+            status == "extinct" |
+            status == "pre_switch_extinct"
+        );
+
+    relapse_i =
+        asInteger(
+            status == "relapse" |
+            status == "pre_switch_relapse"
+        );
+
+    header = c(
+        "patient_id",
+        "lag",
+        "replicate",
+        "status",
+        "extinct",
+        "relapse",
+        "switched",
+        "final_t",
+        "final_N",
+        "N_at_original_horizon",
+        "N_pre_switch",
+        "mean_R2_eff_pre_switch",
+        "sd_R2_eff_pre_switch",
+        "base_mut_rate",
+        "dose_drug_1",
+        "dose_drug_2",
+        "turnover_rate",
+        "draw_m1",
+        "draw_m2",
+        "draw_m3",
+        "cross_resistance",
+        "d1_seed",
+        "treatment_seed"
+    );
+
+    row = c(
+        patient_id,
+        second_strike_lag,
+        replicate_id,
+        status,
+        extinct_i,
+        relapse_i,
+        asInteger(switched),
+        final_t,
+        N,
+        N_at_original_horizon,
+        N_pre_switch,
+        mean_R2_eff_pre_switch,
+        sd_R2_eff_pre_switch,
+        base_mut_rate,
+        dose_drug_1_mono,
+        dose_drug_2_mono,
+        patient_turnover,
+        draw_m1,
+        draw_m2,
+        draw_m3,
+        cross_resistance,
+        d1_seed,
+        treatment_seed
+    );
+
+    writeFile(
+        outcome_file,
+        paste(header, sep=",")
+    );
+
+    writeFile(
+        outcome_file,
+        paste(row, sep=","),
+        append=T
+    );
+
+    sim.simulationFinished();
+}
+
+function (float) seed_standing(float$ target_frac)
+{
+if (target_frac < 0.0 | target_frac > 1.0)
+        stop("standing target must be between 0 and 1");
+
+    inds = p1.individuals;
+    N = length(inds);
+    if (N == 0)
+        return 0.0;
+
+    has_m1 = inds.countOfMutationsOfType(m1) > 0;
+    current_n = sum(has_m1);
+    target_n = asInteger(round(target_frac * N));
+    n_add = target_n - current_n;
+
+    if (n_add > 0)
+    {
+        susceptible = inds[!has_m1];
+        if (n_add > length(susceptible))
+            n_add = length(susceptible);
+        chosen = sample(susceptible, n_add);
+        for (ind in chosen)
+            ind.haplosomes[0].addNewDrawnMutation(m1, 0);
+    }
+
+    final_n = sum(p1.individuals.countOfMutationsOfType(m1) > 0);
+    return final_n / N;
+}
+
+function (float) seed_colony_standing(integer$ cid, float$ target_frac)
+{
+if (target_frac < 0.0 | target_frac > 1.0)
+        stop("standing target must be between 0 and 1");
+
+    inds = p1.individuals[p1.individuals.tag == cid];
+    N = length(inds);
+    if (N == 0)
+        return 0.0;
+
+    has_m1 = inds.countOfMutationsOfType(m1) > 0;
+    current_n = sum(has_m1);
+    target_n = asInteger(round(target_frac * N));
+    n_add = target_n - current_n;
+
+    if (n_add > 0)
+    {
+        susceptible = inds[!has_m1];
+        if (n_add > length(susceptible))
+            n_add = length(susceptible);
+        chosen = sample(susceptible, n_add);
+        for (ind in chosen)
+            ind.haplosomes[0].addNewDrawnMutation(m1, 0);
+    }
+
+    final_n = sum(p1.individuals[p1.individuals.tag == cid].countOfMutationsOfType(m1) > 0);
+    return final_n / N;
+}
+
+function (integer) colony_count(integer$ cid)
+{
+return sum(p1.individuals.tag == cid);
+}
+
+1 early()
+{
+    if (phase == "expand")
+    {
+        sim.addSubpop(
+                "p1",
+                1
+            );
+
+            community.registerEarlyEvent(
+                NULL,
+                "{check_population();}",
+                sim.cycle + 1,
+                sim.cycle + 1
+            );
+        return;
+    }
+    if (phase == "prefix")
+    {
+        // Restores exactly the expanded population state.
+            sim.readFromPopulationFile(
+                snapshot_file
+            );
+
+            // Population files do not preserve the RNG state.
+            // This gives this patient ONE fixed D1 continuation.
+            setSeed(
+                asInteger(d1_seed)
+            );
+
+            defineGlobal(
+                "treatment_start_cycle",
+                sim.cycle
+            );
+
+            defineGlobal(
+                "dose_drug_1",
+                dose_drug_1_mono
+            );
+
+            p1.fitnessScaling =
+                fitness_scaling;
+
+            header = c(
+                "patient_id",
+                "t_treatment",
+                "cycle",
+                "N",
+                "freq_m1",
+                "freq_m2",
+                "freq_m3",
+                "mean_R1",
+                "sd_R1",
+                "mean_R2",
+                "sd_R2",
+                "mean_R2_eff",
+                "sd_R2_eff",
+                "frac_R2_eff_ge_05",
+                "frac_R2_eff_ge_09",
+                "base_mut_rate",
+                "dose_drug_1",
+                "dose_drug_2",
+                "turnover_rate",
+                "draw_m1",
+                "draw_m2",
+                "draw_m3",
+                "cross_resistance",
+                "d1_seed"
+            );
+
+            writeFile(
+                prefix_file,
+                paste(header, sep=",")
+            );
+
+            // Keeps SLiM scheduled beyond the prefix.
+            community.registerLateEvent(
+                NULL,
+                "{sim.simulationFinished();}",
+                sim.cycle + prefix_length + 1,
+                sim.cycle + prefix_length + 1
+            );
+        return;
+    }
+    if (phase == "outcome")
+    {
+        sim.readFromPopulationFile(
+                snapshot_file
+            );
+
+            // Every lag and replicate for this patient now starts
+            // from precisely the same D1 stochastic continuation.
+            setSeed(
+                asInteger(d1_seed)
+            );
+
+            defineGlobal(
+                "treatment_start_cycle",
+                sim.cycle
+            );
+
+            defineGlobal(
+                "current_drug",
+                1
+            );
+
+            defineGlobal(
+                "dose_drug_1",
+                dose_drug_1_mono
+            );
+
+            defineGlobal(
+                "dose_drug_2",
+                0.0
+            );
+
+            p1.fitnessScaling =
+                fitness_scaling;
+
+
+            switch_cycle =
+                sim.cycle +
+                asInteger(
+                    second_strike_lag
+                );
+
+            community.registerEarlyEvent(
+                NULL,
+                "{start_second_strike();}",
+                switch_cycle,
+                switch_cycle
+            );
+
+
+            // Dummy future event keeps SLiM scheduled.
+            community.registerLateEvent(
+                NULL,
+                "{sim.simulationFinished();}",
+                sim.cycle + treatment_time + 1,
+                sim.cycle + treatment_time + 1
+            );
+        return;
+    }
+    if (phase == "clinical_single")
+    {
+        sim.addSubpop("p1", asInteger(n_founders));
+
+            community.registerLateEvent(
+                NULL,
+                "{sim.simulationFinished();}",
+                treatment_cycle + prefix_length + 2,
+                treatment_cycle + prefix_length + 2
+            );
+        return;
+    }
+    if (phase == "clinical_compartments")
+    {
+        sim.addSubpop("p1", K);
+            for (i in 0:(K-1))
+                p1.individuals[i].tag = i;
+
+            // Keep the simulation schedule alive through the full possible
+            // treatment observation window. Without a future scheduled event,
+            // SLiM terminates after tick 1 even though recurring callbacks exist.
+            community.registerLateEvent(
+                NULL,
+                "{sim.simulationFinished();}",
+                treatment_cycle + prefix_length + 2,
+                treatment_cycle + prefix_length + 2
+            );
+        return;
+    }
+    stop("Unknown phase");
+}
+early()
+{
+    if (phase == "expand" | phase == "prefix" | phase == "outcome")
+        if (exists("p1")) p1.fitnessScaling = fitness_scaling;
+}
+late()
+{
+    if (phase == "prefix")
+    {
+        if (treatment_start_cycle < 0)
+                return;
+
+            t =
+                sim.cycle -
+                treatment_start_cycle;
+
+            if (t < 0)
+                return;
+
+            N =
+                p1.individualCount;
+
+            freq_m1 = 0.0;
+            freq_m2 = 0.0;
+            freq_m3 = 0.0;
+
+            mean_R1 = 0.0;
+            sd_R1 = 0.0;
+
+            mean_R2 = 0.0;
+            sd_R2 = 0.0;
+
+            mean_R2_eff = 0.0;
+            sd_R2_eff = 0.0;
+
+            frac_R2_eff_ge_05 = 0.0;
+            frac_R2_eff_ge_09 = 0.0;
+
+
+            if (N > 0)
+            {
+                inds =
+                    p1.individuals;
+
+                count1 =
+                    inds.countOfMutationsOfType(m1);
+
+                count2 =
+                    inds.countOfMutationsOfType(m2);
+
+                count3 =
+                    inds.countOfMutationsOfType(m3);
+
+                freq_m1 =
+                    sum(count1 > 0) / N;
+
+                freq_m2 =
+                    sum(count2 > 0) / N;
+
+                freq_m3 =
+                    sum(count3 > 0) / N;
+
+
+                R1 =
+                    inds.sumOfMutationsOfType(m1);
+
+                R2 =
+                    inds.sumOfMutationsOfType(m2);
+
+                R1[R1 > 1.0] = 1.0;
+                R2[R2 > 1.0] = 1.0;
+
+
+                m3_i =
+                    asInteger(
+                        count3 > 0
+                    );
+
+                R2_eff =
+                    1.0 -
+                    (1.0 - R2) *
+                    (
+                        1.0 -
+                        cross_resistance * m3_i
+                    );
+
+
+                mean_R1 =
+                    mean(R1);
+
+                var_R1 =
+                    mean(R1 * R1) -
+                    mean_R1 * mean_R1;
+
+                if (var_R1 < 0.0)
+                    var_R1 = 0.0;
+
+                sd_R1 =
+                    sqrt(var_R1);
+
+
+                mean_R2 =
+                    mean(R2);
+
+                var_R2 =
+                    mean(R2 * R2) -
+                    mean_R2 * mean_R2;
+
+                if (var_R2 < 0.0)
+                    var_R2 = 0.0;
+
+                sd_R2 =
+                    sqrt(var_R2);
+
+
+                mean_R2_eff =
+                    mean(R2_eff);
+
+                var_R2_eff =
+                    mean(R2_eff * R2_eff) -
+                    mean_R2_eff * mean_R2_eff;
+
+                if (var_R2_eff < 0.0)
+                    var_R2_eff = 0.0;
+
+                sd_R2_eff =
+                    sqrt(var_R2_eff);
+
+
+                frac_R2_eff_ge_05 =
+                    sum(R2_eff >= 0.5) / N;
+
+                frac_R2_eff_ge_09 =
+                    sum(R2_eff >= 0.9) / N;
+            }
+
+
+            row = c(
+                patient_id,
+                t,
+                sim.cycle,
+                N,
+                freq_m1,
+                freq_m2,
+                freq_m3,
+                mean_R1,
+                sd_R1,
+                mean_R2,
+                sd_R2,
+                mean_R2_eff,
+                sd_R2_eff,
+                frac_R2_eff_ge_05,
+                frac_R2_eff_ge_09,
+                base_mut_rate,
+                dose_drug_1_mono,
+                dose_drug_2_mono,
+                patient_turnover,
+                draw_m1,
+                draw_m2,
+                draw_m3,
+                cross_resistance,
+                d1_seed
+            );
+
+            writeFile(
+                prefix_file,
+                paste(row, sep=","),
+                append=T
+            );
+
+
+            if (N == 0)
+            {
+                sim.simulationFinished();
+                return;
+            }
+
+
+            if (
+                N >
+                relapse_cap_factor *
+                (2^expansion_time)
+            )
+            {
+                sim.simulationFinished();
+                return;
+            }
+
+
+            if (t >= prefix_length - 1)
+            {
+                sim.simulationFinished();
+                return;
+            }
+        return;
+    }
+    if (phase == "outcome")
+    {
+        if (treatment_start_cycle < 0)
+                return;
+
+            t =
+                sim.cycle -
+                treatment_start_cycle;
+
+            N =
+                p1.individualCount;
+
+            // --------------------------------------------------------
+            // Original 120-cycle simulation terminated unresolved
+            // after logging t=119.  Save the same state here so the
+            // rerun can be checked for exact reproducibility.
+            // --------------------------------------------------------
+
+            if (t == 119)
+            {
+                defineGlobal(
+                    "N_at_original_horizon",
+                    N
+                );
+            }
+
+
+            // --------------------------------------------------------
+            // Calculate hidden D2 resistance ONCE:
+            // immediately after the last D1 cycle before the switch.
+            // --------------------------------------------------------
+
+            if (
+                current_drug == 1 &
+                t == second_strike_lag - 1
+            )
+            {
+                defineGlobal(
+                    "N_pre_switch",
+                    N
+                );
+
+                mean_eff = 0.0;
+                sd_eff = 0.0;
+
+                if (N > 0)
+                {
+                    inds =
+                        p1.individuals;
+
+                    R2 =
+                        inds.sumOfMutationsOfType(m2);
+
+                    R2[R2 > 1.0] = 1.0;
+
+                    m3_i =
+                        asInteger(
+                            inds.countOfMutationsOfType(m3) > 0
+                        );
+
+                    R2_eff =
+                        1.0 -
+                        (1.0 - R2) *
+                        (
+                            1.0 -
+                            cross_resistance * m3_i
+                        );
+
+                    mean_eff =
+                        mean(R2_eff);
+
+                    var_eff =
+                        mean(R2_eff * R2_eff) -
+                        mean_eff * mean_eff;
+
+                    if (var_eff < 0.0)
+                        var_eff = 0.0;
+
+                    sd_eff =
+                        sqrt(var_eff);
+                }
+
+                defineGlobal(
+                    "mean_R2_eff_pre_switch",
+                    mean_eff
+                );
+
+                defineGlobal(
+                    "sd_R2_eff_pre_switch",
+                    sd_eff
+                );
+            }
+
+
+            if (N == 0)
+            {
+                if (switched)
+                    finish_outcome("extinct");
+                else
+                    finish_outcome("pre_switch_extinct");
+
+                return;
+            }
+
+
+            if (
+                N >
+                relapse_cap_factor *
+                (2^expansion_time)
+            )
+            {
+                if (switched)
+                    finish_outcome("relapse");
+                else
+                    finish_outcome("pre_switch_relapse");
+
+                return;
+            }
+
+
+            if (
+                t >=
+                treatment_time - 1
+            )
+            {
+                finish_outcome(
+                    "unresolved"
+                );
+
+                return;
+            }
+        return;
+    }
+    if (phase == "clinical_single")
+    {
+        if (sim.cycle == baseline_cycle)
+            {
+                N0 = p1.individualCount;
+                if (N0 == 0)
+                {
+                    writeFile(meta_file, "status,patient_id,seed", append=F);
+                    writeFile(meta_file, paste(c("pretreatment_extinct", patient_id, patient_seed), sep=","), append=T);
+                    sim.simulationFinished();
+                    return;
+                }
+
+                defineGlobal("N0_total", N0);
+                defineGlobal("standing_realized", seed_standing(standing_target));
+                defineGlobal("dose_drug_1", dose_drug_1_mono);
+
+                header = c(
+                    "patient_id","source_k5_patient_id","base_patient_id","scenario","t_treatment","cycle","N","status","N0_total",
+                    "target_decay_rate","base_mut_rate","dose_drug_1","turnover_rate",
+                    "m1_effect_mean_target","m1_meanlog","m1_sdlog","single_age","n_founders",
+                    "standing_target","standing_realized","patient_seed"
+                );
+                writeFile(output_file, paste(header, sep=","));
+
+                row0 = c(
+                    patient_id, source_k5_patient_id, base_patient_id, scenario_name, 0, sim.cycle, N0_total, "baseline", N0_total,
+                    target_decay_rate, base_mut_rate, dose_drug_1_mono, patient_turnover,
+                    m1_effect_mean_target, m1_meanlog, m1_sdlog, single_age, n_founders,
+                    standing_target, standing_realized, patient_seed
+                );
+                writeFile(output_file, paste(row0, sep=","), append=T);
+
+                writeFile(meta_file, "status,patient_id,seed,N0_total", append=F);
+                writeFile(meta_file, paste(c("viable", patient_id, patient_seed, N0_total), sep=","), append=T);
+                return;
+            }
+
+            if (sim.cycle < treatment_cycle)
+                return;
+            if (N0_total < 0)
+                return;
+
+            t = sim.cycle - treatment_cycle + 1;
+            N = p1.individualCount;
+
+            status = "running";
+            if (N == 0)
+                status = "extinct";
+            else if (N > patient_relapse_factor * N0_total)
+                status = "relapse";
+            else if (t >= prefix_length)
+                status = "horizon";
+
+            row = c(
+                patient_id, source_k5_patient_id, base_patient_id, scenario_name, t, sim.cycle, N, status, N0_total,
+                target_decay_rate, base_mut_rate, dose_drug_1_mono, patient_turnover,
+                m1_effect_mean_target, m1_meanlog, m1_sdlog, single_age, n_founders,
+                standing_target, standing_realized, patient_seed
+            );
+            writeFile(output_file, paste(row, sep=","), append=T);
+
+            if (status != "running")
+                sim.simulationFinished();
+        return;
+    }
+    if (phase == "clinical_compartments")
+    {
+        // Establish the treatment-onset baseline after the last untreated
+            // survival step.  This avoids comparing a pre-survival N(0) with
+            // post-survival treated observations.
+            if (sim.cycle == baseline_cycle)
+            {
+                nvec = rep(0, K);
+                for (i in 0:(K-1))
+                    nvec[i] = colony_count(i);
+
+                if (any(nvec == 0))
+                {
+                    writeFile(meta_file, "status,patient_id,seed", append=F);
+                    writeFile(meta_file, paste(c("pretreatment_colony_extinct", patient_id, patient_seed), sep=","), append=T);
+                    sim.simulationFinished();
+                    return;
+                }
+
+                defineGlobal("N0_by_colony", nvec);
+                defineGlobal("N0_total", sum(nvec));
+
+                realized = rep(0.0, K);
+                for (i in 0:(K-1))
+                    realized[i] = seed_colony_standing(i, standing_targets[i]);
+                defineGlobal("standing_realized", realized);
+
+                defineGlobal("dose_drug_1", dose_drug_1_mono);
+
+                header = c(
+                    "patient_id","base_patient_id","scenario","t_treatment","cycle","N","status","N0_total",
+                    "target_decay_rate","base_mut_rate","dose_drug_1","turnover_rate",
+                    "m1_effect_mean_target","m1_meanlog","m1_sdlog",
+                    "age1","age2","age3","age4","age5",
+                    "N1","N2","N3","N4","N5",
+                    "standing1_target","standing2_target","standing3_target","standing4_target","standing5_target",
+                    "standing1_realized","standing2_realized","standing3_realized","standing4_realized","standing5_realized",
+                    "patient_seed"
+                );
+                writeFile(output_file, paste(header, sep=","));
+
+                row0 = c(
+                    patient_id, base_patient_id, scenario_name, 0, sim.cycle, N0_total, "baseline", N0_total,
+                    target_decay_rate, base_mut_rate, dose_drug_1_mono, patient_turnover,
+                    m1_effect_mean_target, m1_meanlog, m1_sdlog,
+                    ages,
+                    N0_by_colony,
+                    standing_targets,
+                    standing_realized,
+                    patient_seed
+                );
+                writeFile(output_file, paste(row0, sep=","), append=T);
+
+                writeFile(meta_file, "status,patient_id,seed,N0_total", append=F);
+                writeFile(meta_file, paste(c("viable", patient_id, patient_seed, N0_total), sep=","), append=T);
+                return;
+            }
+
+            if (sim.cycle < treatment_cycle)
+                return;
+
+            if (N0_total < 0)
+                return;
+
+            t = sim.cycle - treatment_cycle + 1;
+            nvec = rep(0, K);
+            for (i in 0:(K-1))
+                nvec[i] = colony_count(i);
+            N = sum(nvec);
+
+            status = "running";
+            if (N == 0)
+                status = "extinct";
+            else if (N > patient_relapse_factor * N0_total)
+                status = "relapse";
+            else if (t >= prefix_length)
+                status = "horizon";
+
+            row = c(
+                patient_id, base_patient_id, scenario_name, t, sim.cycle, N, status, N0_total,
+                target_decay_rate, base_mut_rate, dose_drug_1_mono, patient_turnover,
+                m1_effect_mean_target, m1_meanlog, m1_sdlog,
+                ages,
+                nvec,
+                standing_targets,
+                standing_realized,
+                patient_seed
+            );
+            writeFile(output_file, paste(row, sep=","), append=T);
+
+            if (status != "running")
+                sim.simulationFinished();
+        return;
+    }
+}

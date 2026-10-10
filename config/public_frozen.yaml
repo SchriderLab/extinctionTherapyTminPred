@@ -1,0 +1,10 @@
+# Public-data-only analysis. No new SLiM populations or reference trajectories.
+# Run from the repository root (after the manuscript code has been staged).
+extends: [frozen.yaml]
+mode: frozen
+run_dir: results/runs/public_frozen
+frozen:
+  cohort: data/cohort
+  reference: data/reference
+clinical:
+  enabled: false

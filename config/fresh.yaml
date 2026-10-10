@@ -1,0 +1,5 @@
+extends: [primary.yaml]
+run_dir: results/runs/fresh
+reference:
+  design: lhs
+  resolved_seeds: null

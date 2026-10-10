@@ -1,0 +1,23 @@
+{
+  "source_archive_sha256": "3094ab2b332ac6e59a16db45c9dcc6caca4dcf8c8c04d4715c0fe92a16852e74",
+  "python_tests_passed": 31,
+  "clinical_figure_software_units_passed": 18,
+  "clinical_fixture_figures": 21,
+  "clinical_cohort_counts": [
+    506,
+    482,
+    268,
+    263
+  ],
+  "E11_label_rows": 1414,
+  "E11_patients": 266,
+  "E11_positive_rows": 500,
+  "python_files_syntax_checked": 48,
+  "shell_files_syntax_checked": 5,
+  "slim_execution_tested": false,
+  "snakemake_execution_tested": false,
+  "remote_git_modified": false,
+  "maintained_slim_files": 1,
+  "retained_clinical_kernels": 25,
+  "frozen_manuscript_pdfs": 30
+}

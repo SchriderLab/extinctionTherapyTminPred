@@ -1,0 +1,7 @@
+extends: [local.yaml]
+mode: regenerate
+run_dir: results/runs/paper_regenerated
+clinical:
+  enabled: true
+  workspace: private/runs/paper_regenerated
+  config: config/clinical_regenerate.yaml

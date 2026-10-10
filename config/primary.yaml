@@ -1,0 +1,73 @@
+# Methods 2.2–2.5, 2.7; Tables 1–2. New outputs never overwrite frozen inputs.
+run_dir: results/runs/paper
+slim: slim
+mode: regenerate
+primary:
+  n_patients: 80
+  lhs_seed: 20260908
+  mutation_rate: [1.0e-8, 5.0e-8]
+  dose1: [0.60, 0.80]
+  turnover: [0.10, 0.30]
+  p_m2: [0.25, 0.65]
+  p_m3: 0.10
+  dose2_min: 0.50
+  dose2_gap: 0.05
+  cross_resistance: 0.30
+  Q: 1000
+  m1_meanlog: -0.635825624
+  m1_sdlog: 0.5
+  m2_meanlog: -0.635825624
+  m2_sdlog: 0.5
+  expansion_time: 20  # Source code: target size exponent, NOT elapsed ticks. See docs/model_semantics.md.
+  prefix_length: 20
+  treatment_time: 300  # 300 treatment observations; last zero-based t=299.
+  relapse_cap_factor: 1.5
+  lags: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+  n_replicates: 10
+  expansion_seed_base: 680000001
+  d1_seed_base: 780000001
+  treatment_seed_base: 1000000000
+  expansion_attempts: 20
+  expansion_seed_step: 10000
+reference:
+  n: 10000
+  design: frozen_manifest  # Import the paper's original manifest; no substitute generator is guessed.
+  manifest: data/frozen/reference_manifest.csv
+  resolved_seeds: data/frozen/reference_features_all.csv
+  batch_size: 100
+  # Used only with design=lhs. This creates a fresh realization, not the historical library.
+  lhs_seed: 20261008
+  expansion_seed_base: 1600000001
+  d1_seed_base: 1700000001
+abc:
+  scan_times: [0, 1, 2, 3]
+  neighbors: [10, 25, 50, 100, 200, 400]
+  slope_weights: [0.25, 0.5, 1.0, 2.0]
+  folds: 5
+  seed: 20260910
+  batch_size: 48
+  epsilon: 1.0e-8
+policies:
+  monitoring_quantile: 0.95
+  min_scan_count: 2
+  threshold_scans: [0, 4, 8, 12]
+  persistent_multiplier: 1.25
+  ned_multiplier: 10.0
+  bootstrap: 2000
+  seed: 20260911
+noise:
+  sigma: [0.0, 0.05, 0.10, 0.20, 0.30]
+  draws: 100
+  biomarkers: [1, 2, 3]
+  seed: 20260930
+  neighbors: 25
+  slope_weight: 2.0
+  observation_times: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+  query_batch_size: 96
+frozen:
+  cohort: data/frozen/cohort
+  reference: data/frozen/reference
+clinical:
+  enabled: false
+  config: config/clinical.yaml
+  workspace: private/runs/paper
