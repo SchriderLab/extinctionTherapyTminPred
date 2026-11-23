@@ -74,7 +74,21 @@ nadir-prediction reference set contains 9,983 trajectories.
 The final predictor uses four early Drug-1 population measurements from
 treatment cycles 0--3 to predict the future population nadir.
 
-## Reproducing the manuscript figures
+## Current reactive analyses
+The [verified manuscript figures and source tables](paper/reactive/) are included here.
+
+The main figure command below recomputes the trigger-only comparisons. ABC uses
+cycles 0–3. Reactive rules inspect cycles 0, 4, 8, 12, 16, and 19. At each
+four-, five-, or six-scan horizon, ABC and reactive extinction estimates use
+the same patients (and noise draws) who triggered. For NED, both ABC reference
+and patient inputs below 10,000 cells are encoded as zero before slopes are
+calculated. The sensitivity analysis retains their exact values. Primary and
+sensitivity outputs are in `reproduced_results/reactive/`. The fallback
+counterfactual appears only in `fallback_diagnostic.csv`.
+The committed legacy figures and source tables predate this revision.
+Clinical analyses use the first qualifying local PSA low as their primary target.
+
+## Reproducing the simulation figures
 
 From the repository root, run:
 
@@ -91,8 +105,7 @@ reproduced_results/
 ```
 
 The `reproduced_results/` directory is not tracked by Git. The committed
-`figures/` and `data/source_data/` directories contain the frozen manuscript
-versions for comparison.
+`figures/` and `data/source_data/` directories contain historical versions for comparison.
 
 ## Software
 
@@ -107,3 +120,20 @@ complete set of raw reference-library trajectories are intentionally not
 tracked. The frozen tables required for the reported analyses are included.
 A sampled subset of reference trajectories used for the supplementary
 reference-support figure is also included.
+
+## Independent clinical rerun on Longleaf
+
+With authorized VENICE and MAINSAIL trial data available on Longleaf, activate the
+extinction-paper environment and run `bash hpc/submit_clinical_treb_clean.sh /path/to/new-private-run`.
+Preparation rebuilds the first post-cycle-3 local PSA low and the 184/47
+VENICE split, refits the eligible trajectories, and starts a new 2,000-run
+SLiM reference library. After model fitting the final job regenerates the
+cutoff, training-size and sequential comparisons. The aggregate verification
+compares split and endpoint membership, 609 metric rows, 80 cutoff rows,
+202 training-size rows and eight paired sequential summaries with the archived run.
+Raw inputs, patient-level outputs and the raw result ZIP belong in the private run
+directory. The broad initial transfer experiment and global-nadir sensitivity
+have separate workflows. Paths can be supplied through `CLINICAL_HISTORICAL_ROOT`,
+`CLINICAL_AUDIT_CASE`, `CLINICAL_ADSL`, `CLINICAL_ADLB`, `CLINICAL_MAINSAIL_LAB`
+and `CLINICAL_SLIM`. The archived VENICE cohort flags and 231-patient membership
+files are required for the original preparation checks.

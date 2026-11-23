@@ -1,0 +1,30 @@
+{
+  "historical_root": "/users/w/a/wang0207/cancer_rescue/cancer_sims",
+  "audit_case": "/users/w/a/wang0207/cancer_rescue/cancer_sims/venice_reanalysis_20261022/results/PAPER_CLINICAL_REPRO_20261027_B",
+  "audit_pass": "pass_1793142171173113992",
+  "output": "/users/w/a/wang0207/cancer_rescue/cancer_sims/venice_reanalysis_20261022/results/VENICE_TREB_20261028_B",
+  "adsl": null,
+  "adlb": null,
+  "mainsail_lab": null,
+  "slim": "/nas/longleaf/rhel9/apps/slim/5.1/bin/slim",
+  "seed": 20261029,
+  "test_n": 47,
+  "simulation_n": 2000,
+  "simulation_batch_size": 10,
+  "simulation_max_retries": 10,
+  "simulation_horizon": 80,
+  "simulation_concurrency": 8,
+  "bootstrap_n": 2000,
+  "empirical_draws": 10000,
+  "learning_repeats": 20,
+  "scan_counts": [
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "primary_binary_cutoff": 8,
+  "clinical_source_commit": "2d2b75e30ea803e4b85077e0c591ba9db5c630df",
+  "resume_from_output": null
+}

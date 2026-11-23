@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import math
-import warnings
+import argparse
+import shutil
+import subprocess
+import sys
 
 import numpy as np
 import pandas as pd
@@ -19,7 +22,9 @@ REF = ROOT / "data" / "reference"
 ABC = NEW / "abc_hybrid10k_4scan"
 REGRET = ABC / "regret_decomposition"
 
-OUT = ROOT / "reproduced_results"
+parser = argparse.ArgumentParser(description="Reproduce the simulation figures from frozen inputs.")
+parser.add_argument("--output", type=Path, default=ROOT / "reproduced_results")
+OUT = parser.parse_args().output.resolve()
 FIG = OUT / "figures"
 DATA = OUT / "source_data"
 FIG.mkdir(parents=True, exist_ok=True)
@@ -29,7 +34,6 @@ SEED = 20260910
 RNG = np.random.default_rng(SEED)
 N_BOOT = 10000
 N_REP = 10
-TILE_END = 12
 
 # Color-blind-friendly palette (Okabe-Ito-like)
 BLUE = "#0072B2"
@@ -154,15 +158,6 @@ def find_prefix(pid):
     return None
 
 
-def evenly_spaced_schedule(n_scans, end=TILE_END):
-    # n observations including t=0. For example:
-    # n=5 -> [0,3,6,9,12]; n=13 -> every integer cycle 0..12.
-    s = np.rint(np.linspace(0, end, int(n_scans))).astype(int)
-    if len(np.unique(s)) != len(s):
-        raise RuntimeError(f"Duplicate scan times for n={n_scans}: {s}")
-    return s
-
-
 # ============================================================
 # Load authoritative result tables
 # ============================================================
@@ -237,7 +232,7 @@ TRAJ = pd.concat(traj_rows, ignore_index=True)
 TRAJ.to_csv(DATA / "Fig2A_drug1_trajectories.csv", index=False)
 
 # Convenience E lookup.
-E_lookup = E.set_index(["patient_id", "lag"])["extinction_probability"]
+
 
 
 # ============================================================
@@ -294,72 +289,35 @@ overall_extinction = n_extinct / n_outcomes
 
 
 # ============================================================
-# Reactive monitoring: fixed 4-scan ABC benchmark versus 2..13 scans
+# Current trigger-only reactive analysis and tables used in the paper.
 # ============================================================
-reactive_rows = []
-for n_scans in range(2, TILE_END + 2):
-    schedule = evenly_spaced_schedule(n_scans)
-    for pid, z in trajs.items():
-        obsN = np.interp(schedule, z["t"].to_numpy(float), z["N"].to_numpy(float))
-        increases = np.where(np.diff(obsN) > 0)[0]
-        if len(increases):
-            j = int(increases[0] + 1)
-        else:
-            j = len(schedule) - 1
-        switch_t = int(schedule[j])
-        lag = int(np.clip(switch_t + 1, 1, 20))
-        ext = float(E_lookup.loc[(pid, lag)])
-        tm = float(CHAR.loc[CHAR["patient_id"] == pid, "tmin"].iloc[0])
-        reactive_rows.append({
-            "patient_id": pid,
-            "n_scans": n_scans,
-            "schedule": ",".join(map(str, schedule)),
-            "switch_t": switch_t,
-            "selected_lag": lag,
-            "true_tmin": tm,
-            "switch_minus_tmin": switch_t - tm,
-            "extinction_probability": ext,
-        })
-REACTIVE = pd.DataFrame(reactive_rows)
-REACTIVE.to_csv(DATA / "Fig6_reactive_patient_level.csv", index=False)
-
-reactive_summary = []
-for n_scans, g in REACTIVE.groupby("n_scans", sort=True):
-    m, lo, hi = bootstrap_mean_ci(g["extinction_probability"], seed_offset=100+n_scans)
-    dm, dlo, dhi = bootstrap_mean_ci(g["switch_minus_tmin"], seed_offset=200+n_scans)
-    reactive_summary.append({
-        "n_scans": int(n_scans),
-        "schedule": g["schedule"].iloc[0],
-        "mean_extinction": m,
-        "extinction_ci_low": lo,
-        "extinction_ci_high": hi,
-        "mean_switch_minus_tmin": dm,
-        "delay_ci_low": dlo,
-        "delay_ci_high": dhi,
-    })
-REACTIVE_SUM = pd.DataFrame(reactive_summary)
-REACTIVE_SUM.to_csv(DATA / "Fig6_reactive_scan_budget_summary.csv", index=False)
-
-dense = REACTIVE[REACTIVE["n_scans"] == 13][["patient_id", "extinction_probability"]].rename(
-    columns={"extinction_probability": "dense_extinction"})
-PAIR_DENSE = D_primary[["patient_id", "abc_extinction"]].merge(
-    dense, on="patient_id", how="inner", validate="one_to_one")
+reactive_output = OUT / "reactive"
+subprocess.run([
+    sys.executable, str(ROOT / "analysis/reactive/run_reactive.py"),
+    "--repo", str(ROOT), "--output", str(reactive_output), "--overwrite",
+], check=True)
+dense_patients = pd.read_csv(reactive_output / "dense_patient_level.csv")
+dense_summary = pd.read_csv(reactive_output / "dense_summary.csv")
+subprocess.run([sys.executable, str(ROOT / "analysis/reactive/verify_outputs.py"),
+                str(reactive_output)], check=True)
+# Preserve the historical 0-12 source table exports, now with trigger status.
+compat_patients = dense_patients[dense_patients.schedule.str.endswith(",12")].rename(columns={
+    "reactive_extinction": "extinction_probability", "switch_delay": "switch_minus_tmin"})
+compat_patients.to_csv(DATA / "Fig6_reactive_patient_level.csv", index=False)
+compat_summary = dense_summary[dense_summary.horizon == 12].rename(columns={
+    "reactive_extinction": "mean_extinction", "reactive_extinction_ci_low": "extinction_ci_low",
+    "reactive_extinction_ci_high": "extinction_ci_high", "switch_delay": "mean_switch_minus_tmin",
+    "switch_delay_ci_low": "delay_ci_low", "switch_delay_ci_high": "delay_ci_high"})
+compat_summary.to_csv(DATA / "Fig6_reactive_scan_budget_summary.csv", index=False)
+dense = dense_patients[(dense_patients.n_scans == 20) & dense_patients.triggered]
+PAIR_DENSE = dense[["patient_id", "abc_extinction_matched", "reactive_extinction"]].rename(columns={
+    "abc_extinction_matched": "abc_extinction", "reactive_extinction": "dense_extinction"})
 PAIR_DENSE.to_csv(DATA / "Fig6_dense_vs_abc_patient_level.csv", index=False)
 
 dense_mean = float(PAIR_DENSE["dense_extinction"].mean())
 abc_beats_dense = int((PAIR_DENSE["abc_extinction"] > PAIR_DENSE["dense_extinction"] + 1e-12).sum())
 tie_dense = int(np.isclose(PAIR_DENSE["abc_extinction"], PAIR_DENSE["dense_extinction"]).sum())
 dense_beats_abc = int((PAIR_DENSE["abc_extinction"] < PAIR_DENSE["dense_extinction"] - 1e-12).sum())
-
-# Diagnostic: should reproduce the already established dense-vs-ABC result.
-if abs(dense_mean - 0.703) > 0.015 or (abc_beats_dense, tie_dense, dense_beats_abc) != (11, 61, 8):
-    warnings.warn(
-        "Dense-monitoring recomputation does not exactly match the previously established "
-        f"~0.701 and 11/61/8 result. Got mean={dense_mean:.4f}, "
-        f"ABC/tie/dense={abc_beats_dense}/{tie_dense}/{dense_beats_abc}. "
-        "Check the historical scan-schedule convention before manuscript use."
-    )
-
 
 # ============================================================
 # FIGURE 2: heterogeneous trajectories and treatment windows
@@ -547,60 +505,11 @@ save(fig, "Fig5_timing_regret")
 
 
 # ============================================================
-# FIGURE 6: prediction versus continued reactive monitoring
-# ============================================================
-fig = plt.figure(figsize=(7.25, 6.25), constrained_layout=True)
-gs = fig.add_gridspec(2, 2, height_ratios=[1.0, 1.12], wspace=0.20, hspace=0.18)
-
-ax = fig.add_subplot(gs[0, 0])
-x = REACTIVE_SUM["n_scans"].to_numpy()
-y = REACTIVE_SUM["mean_extinction"].to_numpy()
-lo = REACTIVE_SUM["extinction_ci_low"].to_numpy()
-hi = REACTIVE_SUM["extinction_ci_high"].to_numpy()
-ax.fill_between(x, lo, hi, color=LIGHTGRAY, alpha=0.75, linewidth=0)
-ax.plot(x, y, color=GREEN, marker="o", ms=4, lw=1.7, label="Reactive monitoring")
-ax.axhline(abc_mean, color=BLUE, ls="--", lw=1.5,
-           label=f"4 early scans + ABC ({abc_mean:.3f})")
-ax.set_xticks(np.arange(2, 14))
-ax.set_ylim(0, 1.0)
-ax.set_xlabel("Number of reactive observations")
-ax.set_ylabel("Mean extinction probability")
-ax.set_title("Reactive monitoring improves with scan density", pad=9)
-ax.legend(frameon=False, loc="lower right", fontsize=7.5)
-panel(ax, "a", x=-0.18, y=1.07)
-
-ax = fig.add_subplot(gs[0, 1])
-y = REACTIVE_SUM["mean_switch_minus_tmin"].to_numpy()
-lo = REACTIVE_SUM["delay_ci_low"].to_numpy()
-hi = REACTIVE_SUM["delay_ci_high"].to_numpy()
-ax.fill_between(x, lo, hi, color=LIGHTGRAY, alpha=0.75, linewidth=0)
-ax.plot(x, y, color=GREEN, marker="o", ms=4, lw=1.7)
-ax.axhline(0, color=BLACK, ls="--", lw=0.8)
-ax.set_xticks(np.arange(2, 14))
-ax.set_xlabel("Number of reactive observations")
-ax.set_ylabel(r"Switch delay from $t_{\min}$ (cycles)")
-ax.set_title("Denser monitoring localizes the nadir sooner", pad=9)
-panel(ax, "b", x=-0.18, y=1.07)
-
-ax = fig.add_subplot(gs[1, :])
-ax.plot([-0.03, 1.03], [-0.03, 1.03], color=BLACK, ls="--", lw=1.0)
-ax.scatter(PAIR_DENSE["dense_extinction"], PAIR_DENSE["abc_extinction"],
-           s=30, color=BLUE, alpha=0.60, edgecolor="white", linewidth=0.4)
-ax.set_xlim(-0.03, 1.03)
-ax.set_ylim(-0.03, 1.03)
-# Do not force an equal aspect ratio: using the full-width axis prevents label collisions.
-ax.set_xlabel("Dense reactive extinction probability")
-ax.set_ylabel("4-scan ABC extinction probability")
-ax.set_title("Four early scans match dense monitoring", pad=9)
-ax.text(0.025, 0.97,
-        f"Mean ABC = {abc_mean:.3f}\nMean dense = {dense_mean:.3f}\n"
-        f"ABC / tie / dense = {abc_beats_dense} / {tie_dense} / {dense_beats_abc}",
-        transform=ax.transAxes, ha="left", va="top", fontsize=8,
-        bbox=dict(boxstyle="round,pad=0.28", fc="white", ec=LIGHTGRAY, alpha=0.93))
-panel(ax, "c", x=-0.075, y=1.06)
-
-save(fig, "Fig6_prediction_vs_reactive_monitoring")
-
+# Use the trigger-only figure in both the manuscript and legacy output locations.
+for figure in (reactive_output / "figures").iterdir():
+    shutil.copyfile(figure, FIG / figure.name)
+    if figure.stem == "Reactive_scan_density_sensitivity":
+        shutil.copyfile(figure, FIG / ("Fig6_prediction_vs_reactive_monitoring" + figure.suffix))
 
 # ============================================================
 # FIGURE 3: Amjad-style illustrative patient windows
